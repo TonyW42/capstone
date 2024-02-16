@@ -1,2 +1,2 @@
-Step1: Install npm 
-Step2: npm start 
+Step1: Install npm/
+Step2: npm start/
