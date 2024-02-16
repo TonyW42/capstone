@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Signup Page</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="signup-container">
+        <form id="signup-form">
+            <h2>Signup</h2>
+            <div class="form-group">
+                <label for="name">Name:</label>
+                <input type="text" id="name" name="name" required>
+            </div>
+            <div class="form-group">
+                <label>Choose interventions:</label>
+                <div class="checkbox-group">
+                    <input type="checkbox" id="music" name="intervention" value="music">
+                    <label for="music">Music</label>
+                </div>
+                <div class="checkbox-group">
+                    <input type="checkbox" id="breathing_exercise" name="intervention" value="breathing_exercise">
+                    <label for="breathing_exercise">Breathing Exercise</label>
+                </div>
+                <div class="checkbox-group">
+                    <input type="checkbox" id="meditation" name="intervention" value="meditation">
+                    <label for="meditation">Meditation</label>
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="custom_intervention">Or add a custom intervention:</label>
+                <input type="text" id="custom_intervention" name="custom_intervention" placeholder="Type here...">
+                <button type="button" id="add_constraint">Add</button>
+            </div>
+            
+            
+     
+    
+        <div class="form-group">
+            <label>Choose constraints:</label>
+            <div class="checkbox-group">
+                <input type="checkbox" id="weekends" name="constraint" value="weekends">
+                <label for="weekends">Weekends</label>
+            </div>
+            <div class="checkbox-group">
+                <input type="checkbox" id="sunny_day" name="constraint" value="sunny_day">
+                <label for="sunny_day">Sunny Day</label>
+            </div>
+            <div class="checkbox-group">
+                <input type="checkbox" id="rainy_day" name="constraint" value="rainy_day">
+                <label for="rainy_day">Rainy Day</label>
+            </div>
+            
+                  
+        </form>
+    </div>
+    <div class="form-group">
+        <label>Add constraint:</label>
+        <!-- Existing constraints here -->
+    
+        <!-- Option to add a new constraint -->
+        <div class="checkbox-group">
+            <input type="text" id="custom_constraint" name="custom_constraint" placeholder="Add your constraint">
+            <button type="button" id="add_constraint">Add</button>
+        </div>
+    
+        <!-- Container for new constraint checkboxes -->
+        <div id="custom_constraints_list"></div>
+        
+    </div>
+    <button type="submit">Submit</button>
+    
+    <script src="script.js"></script>
+</body>
+</html>
