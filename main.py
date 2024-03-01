@@ -2,10 +2,13 @@ import streamlit as st
 from signup_page import signup_page
 from login_page import login_page
 from visualization_page import visualization_page
+from log import log_page
+
+
 
 def main():
     st.sidebar.title('Navigation')
-    page = st.sidebar.radio('Go to', ['Signup', 'Login', 'Visualization'])
+    page = st.sidebar.radio('Go to', ['Signup', 'Login', 'Visualization', 'Log'])
 
     st.session_state.logged_in = st.session_state.get('logged_in', False)
 
@@ -20,6 +23,8 @@ def main():
             st.warning("You must log in to access this page.")
             return
         visualization_page()
+    elif page == 'Log':
+        log_page() 
 
 if __name__ == '__main__':
     main()
