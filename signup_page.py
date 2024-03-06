@@ -27,41 +27,39 @@ def is_name_exists(name):
 def signup_page():
     create_database()
     st.title('Signup')
-    name = st.text_input('Name')
+    name = st.text_input('Name', key='name')
 
     st.subheader('Choose interventions:')
-    music = st.checkbox('Music')
-    breathing_exercise = st.checkbox('Breathing Exercise')
-    meditation = st.checkbox('Meditation')
-
-    custom_intervention = st.text_input('Or add a custom intervention:')
-    interventions = []  
-    if st.button('Add intervention'):
-        if music:
-            interventions.append('Music')
-        if breathing_exercise:
-            interventions.append('Breathing Exercise')
-        if meditation:
-            interventions.append('Meditation')
-        if custom_intervention:
-            interventions.append(custom_intervention)
+    music = st.checkbox('Music', key='music')
+    breathing_exercise = st.checkbox('Breathing Exercise', key='breathing_exercise')
+    meditation = st.checkbox('Meditation', key='meditation')
+    custom_intervention = st.text_input('Or add a custom intervention:', key='custom_intervention')
 
     st.subheader('Choose constraints:')
-    weekends = st.checkbox('Weekends')
-    sunny_day = st.checkbox('Sunny Day')
-    rainy_day = st.checkbox('Rainy Day')
+    weekends = st.checkbox('Weekends', key='weekends')
+    sunny_day = st.checkbox('Sunny Day', key='sunny_day')
+    rainy_day = st.checkbox('Rainy Day', key='rainy_day')
+    custom_constraint = st.text_input('Or add a custom constraint:', key='custom_constraint')
 
-    custom_constraint = st.text_input('Or add a custom constraint:')
+    interventions = []  
+    if music:
+        interventions.append('Music')
+    if breathing_exercise:
+        interventions.append('Breathing Exercise')
+    if meditation:
+        interventions.append('Meditation')
+    if custom_intervention:
+        interventions.append(custom_intervention)
+
     constraints = []  
-    if st.button('Add constraint'):
-        if weekends:
-            constraints.append('Weekends')
-        if sunny_day:
-            constraints.append('Sunny Day')
-        if rainy_day:
-            constraints.append('Rainy Day')
-        if custom_constraint:
-            constraints.append(custom_constraint)
+    if weekends:
+        constraints.append('Weekends')
+    if sunny_day:
+        constraints.append('Sunny Day')
+    if rainy_day:
+        constraints.append('Rainy Day')
+    if custom_constraint:
+        constraints.append(custom_constraint)
 
     if st.button('Signup'):
         if not is_name_exists(name):
