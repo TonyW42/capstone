@@ -27,14 +27,14 @@ def visualization_page():
 
     # Populate start_date and end_date if both datasets are available
     if stress_df is not None and hr_df is not None:
-        start_date = min(stress_df['isoDate'].min().date(), hr_df['isoDate'].min().date())
-        end_date = max(stress_df['isoDate'].max().date(), hr_df['isoDate'].max().date())
+        start_date = min(stress_df['isoDate'].min(), hr_df['isoDate'].min())
+        end_date = max(stress_df['isoDate'].max(), hr_df['isoDate'].max())
     elif stress_df is not None:
-        start_date = stress_df['isoDate'].min().date()
-        end_date = stress_df['isoDate'].max().date()
+        start_date = stress_df['isoDate'].min()
+        end_date = stress_df['isoDate'].max()
     elif hr_df is not None:
-        start_date = hr_df['isoDate'].min().date()
-        end_date = hr_df['isoDate'].max().date()
+        start_date = hr_df['isoDate'].min()
+        end_date = hr_df['isoDate'].max()
 
     # Create a range selector for dates
     start_date = st.sidebar.date_input('Start Date', value=start_date)
@@ -44,14 +44,16 @@ def visualization_page():
         # Filter the data based on the selected date range
         if (stress_df is not None and not stress_df.empty) or (hr_df is not None and not hr_df.empty):
             if start_date and end_date:
+                start_date = pd.Timestamp(start_date).tz_localize(None)
+                end_date = pd.Timestamp(end_date).tz_localize(None)
                 if stress_df is not None and hr_df is not None:
-                    filtered_stress_df = stress_df[(stress_df['isoDate'].dt.date >= start_date) & (stress_df['isoDate'].dt.date <= end_date)]
-                    filtered_hr_df = hr_df[(hr_df['isoDate'].dt.date >= start_date) & (hr_df['isoDate'].dt.date <= end_date)]
+                    filtered_stress_df = stress_df[(stress_df['isoDate'].dt.tz_localize(None) >= start_date) & (stress_df['isoDate'].dt.tz_localize(None) <= end_date)]
+                    filtered_hr_df = hr_df[(hr_df['isoDate'].dt.tz_localize(None) >= start_date) & (hr_df['isoDate'].dt.tz_localize(None) <= end_date)]
                 elif stress_df is not None:
-                    filtered_stress_df = stress_df[(stress_df['isoDate'].dt.date >= start_date) & (stress_df['isoDate'].dt.date <= end_date)]
+                    filtered_stress_df = stress_df[(stress_df['isoDate'].dt.tz_localize(None) >= start_date) & (stress_df['isoDate'].dt.tz_localize(None) <= end_date)]
                     filtered_hr_df = None
                 elif hr_df is not None:
-                    filtered_hr_df = hr_df[(hr_df['isoDate'].dt.date >= start_date) & (hr_df['isoDate'].dt.date <= end_date)]
+                    filtered_hr_df = hr_df[(hr_df['isoDate'].dt.tz_localize(None) >= start_date) & (hr_df['isoDate'].dt.tz_localize(None) <= end_date)]
                     filtered_stress_df = None
 
                 # Plot the data
@@ -59,9 +61,9 @@ def visualization_page():
 
                 if filtered_stress_df is not None and not filtered_stress_df.empty:
                     stress_chart = alt.Chart(filtered_stress_df).mark_line(color='blue').encode(
-                        x=alt.X('isoDate:T', axis=alt.Axis(format='%Y-%m-%d')),
+                        x=alt.X('isoDate:T', axis=alt.Axis(title='Date and Time', format='%Y-%m-%d %H:%M:%S')),
                         y=alt.Y('stressLevel:Q', axis=alt.Axis(title='Stress Level')),
-                        tooltip=['stressLevel:Q', alt.Tooltip('isoDate:T', format='%Y-%m-%d')]
+                        tooltip=['stressLevel:Q', alt.Tooltip('isoDate:T', format='%Y-%m-%d %H:%M:%S')]
                     ).properties(
                         width=800,
                         height=400,
@@ -71,9 +73,9 @@ def visualization_page():
 
                 if filtered_hr_df is not None and not filtered_hr_df.empty:
                     hr_chart = alt.Chart(filtered_hr_df).mark_line(color='red').encode(
-                        x=alt.X('isoDate:T', axis=alt.Axis(format='%Y-%m-%d')),
+                        x=alt.X('isoDate:T', axis=alt.Axis(title='Date and Time', format='%Y-%m-%d %H:%M:%S')),
                         y=alt.Y('beatsPerMinute:Q', axis=alt.Axis(title='Heart Rate')),
-                        tooltip=['beatsPerMinute:Q', alt.Tooltip('isoDate:T', format='%Y-%m-%d')]
+                        tooltip=['beatsPerMinute:Q', alt.Tooltip('isoDate:T', format='%Y-%m-%d %H:%M:%S')]
                     ).properties(
                         width=800,
                         height=400,
