@@ -1,28 +1,88 @@
 import streamlit as st
 import pandas as pd
-import matplotlib.pyplot as plt
-
-st.set_option('deprecation.showPyplotGlobalUse', False)
+import altair as alt
 
 def visualization_page():
     st.title("Visualization Page")
 
-    uploaded_file = st.file_uploader("Upload CSV", type=["csv"])
-    if uploaded_file is not None:
+    # Upload both CSV files
+    uploaded_files = st.file_uploader("Upload Stress and Heart Rate Data CSV", type=["csv"], accept_multiple_files=True)
+
+    stress_df = None
+    hr_df = None
+
+    for uploaded_file in uploaded_files:
         header_length = 5
         df = pd.read_csv(uploaded_file, skiprows=header_length)
         df['isoDate'] = pd.to_datetime(df['isoDate'])
-        fig = plot_data(df)
-        st.pyplot(fig)
 
-def plot_data(df):
-    fig, ax = plt.subplots(figsize=(10, 6))
-    ax.plot(df['isoDate'].values, df['stressLevel'].values, label='Original Data', color='blue')
-    ax.set_xlabel('Date')
-    ax.set_ylabel('Stress Level')
-    ax.set_title('Stress Level over Time')
-    ax.legend()
-    return fig
+        if 'stressLevel' in df.columns:
+            stress_df = df
+        elif 'beatsPerMinute' in df.columns:
+            hr_df = df
+
+    # Initialize start_date and end_date variables
+    start_date = None
+    end_date = None
+
+    # Populate start_date and end_date if both datasets are available
+    if stress_df is not None and hr_df is not None:
+        start_date = min(stress_df['isoDate'].min().date(), hr_df['isoDate'].min().date())
+        end_date = max(stress_df['isoDate'].max().date(), hr_df['isoDate'].max().date())
+    elif stress_df is not None:
+        start_date = stress_df['isoDate'].min().date()
+        end_date = stress_df['isoDate'].max().date()
+    elif hr_df is not None:
+        start_date = hr_df['isoDate'].min().date()
+        end_date = hr_df['isoDate'].max().date()
+
+    # Create a range selector for dates
+    start_date = st.sidebar.date_input('Start Date', value=start_date)
+    end_date = st.sidebar.date_input('End Date', value=end_date)
+
+    if stress_df is not None or hr_df is not None:
+        # Filter the data based on the selected date range
+        if (stress_df is not None and not stress_df.empty) or (hr_df is not None and not hr_df.empty):
+            if start_date and end_date:
+                if stress_df is not None and hr_df is not None:
+                    filtered_stress_df = stress_df[(stress_df['isoDate'].dt.date >= start_date) & (stress_df['isoDate'].dt.date <= end_date)]
+                    filtered_hr_df = hr_df[(hr_df['isoDate'].dt.date >= start_date) & (hr_df['isoDate'].dt.date <= end_date)]
+                elif stress_df is not None:
+                    filtered_stress_df = stress_df[(stress_df['isoDate'].dt.date >= start_date) & (stress_df['isoDate'].dt.date <= end_date)]
+                    filtered_hr_df = None
+                elif hr_df is not None:
+                    filtered_hr_df = hr_df[(hr_df['isoDate'].dt.date >= start_date) & (hr_df['isoDate'].dt.date <= end_date)]
+                    filtered_stress_df = None
+
+                # Plot the data
+                chart = None
+
+                if filtered_stress_df is not None and not filtered_stress_df.empty:
+                    stress_chart = alt.Chart(filtered_stress_df).mark_line(color='blue').encode(
+                        x=alt.X('isoDate:T', axis=alt.Axis(format='%Y-%m-%d')),
+                        y=alt.Y('stressLevel:Q', axis=alt.Axis(title='Stress Level')),
+                        tooltip=['stressLevel:Q', alt.Tooltip('isoDate:T', format='%Y-%m-%d')]
+                    ).properties(
+                        width=800,
+                        height=400,
+                        title='Stress Level and Heart Rate over Time'
+                    )
+                    chart = stress_chart
+
+                if filtered_hr_df is not None and not filtered_hr_df.empty:
+                    hr_chart = alt.Chart(filtered_hr_df).mark_line(color='red').encode(
+                        x=alt.X('isoDate:T', axis=alt.Axis(format='%Y-%m-%d')),
+                        y=alt.Y('beatsPerMinute:Q', axis=alt.Axis(title='Heart Rate')),
+                        tooltip=['beatsPerMinute:Q', alt.Tooltip('isoDate:T', format='%Y-%m-%d')]
+                    ).properties(
+                        width=800,
+                        height=400,
+                        title='Stress Level and Heart Rate over Time'
+                    )
+                    chart = hr_chart if chart is None else chart + hr_chart
+
+                if chart is not None:
+                    st.altair_chart(chart, use_container_width=True)
 
 if __name__ == '__main__':
     visualization_page()
