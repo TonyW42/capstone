@@ -21,9 +21,11 @@ def visualization_page():
         elif 'beatsPerMinute' in df.columns:
             hr_df = df
 
-    # Initialize start_date and end_date variables
+    # Initialize start_date, end_date, start_hour, and end_hour variables
     start_date = None
     end_date = None
+    start_hour = 0
+    end_hour = 23
 
     # Populate start_date and end_date if both datasets are available
     if stress_df is not None and hr_df is not None:
@@ -40,20 +42,35 @@ def visualization_page():
     start_date = st.sidebar.date_input('Start Date', value=start_date)
     end_date = st.sidebar.date_input('End Date', value=end_date)
 
+    # Create range slider for selecting hour ranges
+    start_hour, end_hour = st.sidebar.slider("Select Hour Range", 0, 23, (start_hour, end_hour))
+
     if stress_df is not None or hr_df is not None:
-        # Filter the data based on the selected date range
+        # Filter the data based on the selected date range and hour range
         if (stress_df is not None and not stress_df.empty) or (hr_df is not None and not hr_df.empty):
             if start_date and end_date:
                 start_date = pd.Timestamp(start_date).tz_localize(None)
                 end_date = pd.Timestamp(end_date).tz_localize(None)
                 if stress_df is not None and hr_df is not None:
-                    filtered_stress_df = stress_df[(stress_df['isoDate'].dt.tz_localize(None) >= start_date) & (stress_df['isoDate'].dt.tz_localize(None) <= end_date)]
-                    filtered_hr_df = hr_df[(hr_df['isoDate'].dt.tz_localize(None) >= start_date) & (hr_df['isoDate'].dt.tz_localize(None) <= end_date)]
+                    filtered_stress_df = stress_df[(stress_df['isoDate'].dt.date >= start_date.date()) &
+                                                   (stress_df['isoDate'].dt.date <= end_date.date()) &
+                                                   (stress_df['isoDate'].dt.hour >= start_hour) &
+                                                   (stress_df['isoDate'].dt.hour <= end_hour)]
+                    filtered_hr_df = hr_df[(hr_df['isoDate'].dt.date >= start_date.date()) &
+                                           (hr_df['isoDate'].dt.date <= end_date.date()) &
+                                           (hr_df['isoDate'].dt.hour >= start_hour) &
+                                           (hr_df['isoDate'].dt.hour <= end_hour)]
                 elif stress_df is not None:
-                    filtered_stress_df = stress_df[(stress_df['isoDate'].dt.tz_localize(None) >= start_date) & (stress_df['isoDate'].dt.tz_localize(None) <= end_date)]
+                    filtered_stress_df = stress_df[(stress_df['isoDate'].dt.date >= start_date.date()) &
+                                                   (stress_df['isoDate'].dt.date <= end_date.date()) &
+                                                   (stress_df['isoDate'].dt.hour >= start_hour) &
+                                                   (stress_df['isoDate'].dt.hour <= end_hour)]
                     filtered_hr_df = None
                 elif hr_df is not None:
-                    filtered_hr_df = hr_df[(hr_df['isoDate'].dt.tz_localize(None) >= start_date) & (hr_df['isoDate'].dt.tz_localize(None) <= end_date)]
+                    filtered_hr_df = hr_df[(hr_df['isoDate'].dt.date >= start_date.date()) &
+                                           (hr_df['isoDate'].dt.date <= end_date.date()) &
+                                           (hr_df['isoDate'].dt.hour >= start_hour) &
+                                           (hr_df['isoDate'].dt.hour <= end_hour)]
                     filtered_stress_df = None
 
                 # Plot the data
