@@ -2,7 +2,29 @@ import streamlit as st
 import pandas as pd
 import altair as alt
 import sqlite3
+import os
+import io
+from google.cloud import storage
 from vega_datasets import data
+
+# Function to directly read CSV from GCS
+def read_csv_from_gcs(bucket_name, file_name):
+    """Reads a CSV file directly from a GCS bucket and loads it into a Pandas DataFrame."""
+    storage_client = storage.Client()
+    bucket = storage_client.bucket(bucket_name)
+    blob = bucket.blob(file_name)
+    
+    # Download the content of the file as a string and convert it to bytes
+    csv_data = blob.download_as_text()
+    #csv_data = blob.download_as_bytes()
+    #loaded_file = io.BytesIO(csv_data)
+
+    # Use io.StringIO to load the data into a pandas DataFrame
+    data = io.StringIO(csv_data)
+    df = pd.read_csv(data)
+    
+    return df
+
 
 def fetch_past_options(user_name, var_name = "events"):
     conn = sqlite3.connect('users.db')
@@ -99,27 +121,100 @@ def visualization_page():
     if 'other_selected' not in st.session_state:
         st.session_state['other_selected'] = False
 
+    if 'data' not in st.session_state:
+        st.session_state['data'] = None
+
+    # if 'submit_selection' not in st.session_state:
+    #     st.session_state['submit_selection'] = False
+    # if 'other_selected' not in st.session_state:
+    #     st.session_state['other_selected'] = False
+
+    # if 'data' not in st.session_state:
+    #     st.session_state['data'] = None
+
+    # Connect GCP to directly feed the csv data files into the app
+    # Creating a hyperlink to GCP
+    st.markdown("[Access the Google Cloud Bucket](https://console.cloud.google.com/storage/browser?project=apcomp297&prefix=&forceOnBucketsSortingFiltering=true)", unsafe_allow_html=True)
+    # Set the path to your sevice account key
+    os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "apcomp297-84a78a17c7a6.json" #replace with your path to the .json credential file
+    # Allow the user to input bucke name, subfolder, and file name
+    bucket_name = st.text_input("Enter GCP Bucket Name", value="my-bucket")
+    subfolder = st.text_input("Enter GCP Subfolder (optional)", value='raw/')
+    file_name = st.text_input("Enter CSV File Name (with extension)", value="example.csv")
+    #Combine subfolder and file name to create the full file path
+    full_file_path  = f"{subfolder}{file_name}" if subfolder else file_name
+
+    if st.button("Load CSV"):
+        try:
+            # Load the CSV directly from GCS
+            st.info(f"Loading {file_name} from bucket {bucket_name}...")
+            df_t = read_csv_from_gcs(bucket_name, full_file_path)
+            st.success(f"Successfully loaded {file_name}")
+            #Display CSV content
+            st.dataframe(df_t)
+            st.session_state['data'] = df_t
+
+        except Exception as e:
+            st.error(f"Error: {str(e)}")
+
+
     # Upload both CSV files
-    uploaded_files = st.file_uploader("Upload Stress and Heart Rate Data CSV", type=["csv"], accept_multiple_files=True)
+    # uploaded_files = st.file_uploader("Upload Stress and Heart Rate Data CSV", type=["csv"], accept_multiple_files=True)
 
     stress_df = None
     hr_df = None
 
-    for uploaded_file in uploaded_files:
-        header_length = 0  ## NOTE: used to be 5
-        df = pd.read_csv(uploaded_file, skiprows=header_length)
-        df['isoDate'] = pd.to_datetime(df['isoDate'])
+    # for uploaded_file in uploaded_files:
+    #     header_length = 0  ## NOTE: used to be 5
+    #     df = pd.read_csv(uploaded_file, skiprows=header_length)
+    #     df['isoDate'] = pd.to_datetime(df['isoDate'])
 
-        if 'stressLevel' in df.columns:
-            stress_df = df
-        elif 'beatsPerMinute' in df.columns:
-            hr_df = df
+    #     if 'stressLevel' in df.columns:
+    #         stress_df = df
+    #     elif 'beatsPerMinute' in df.columns:
+    #         hr_df = df
 
+    # # Initialize start_date, end_date, start_hour, and end_hour variables
+    # start_date = None
+    # end_date = None
+    # start_hour = 0
+    # end_hour = 23
+
+    df = st.session_state['data']
+    # assert df is not None 
+    # Dropdown selectors to choose which columns on the Y-axis to plot
+    x_axis = x_axis = df.columns[0]
+    y_axis_options = df.columns[1:]
+    y_axis = st.selectbox('Select the column for the Y-axis', options=y_axis_options)
+
+    # Plot using Altair
+    if x_axis and y_axis:
+        chart = alt.Chart(df).mark_line().encode(
+            x=x_axis,
+            y=y_axis,
+            tooltip=[x_axis, y_axis]
+        ).properties(
+            title=f'{y_axis} vs {x_axis}'
+        )
+
+        # Display the chart
+        st.altair_chart(chart, use_container_width=True)
+        
+    stress_df = None
+    hr_df = None
+
+    df['isoDate'] = pd.to_datetime(df['isoDate'])
+
+    if 'stressLevel' in df.columns:
+        stress_df = df
+    elif 'beatsPerMinute' in df.columns:
+        hr_df = df
     # Initialize start_date, end_date, start_hour, and end_hour variables
     start_date = None
     end_date = None
     start_hour = 0
     end_hour = 23
+
 
     # Populate start_date and end_date if both datasets are available
     if stress_df is not None and hr_df is not None:
