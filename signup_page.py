@@ -5,13 +5,13 @@ def create_database():
     conn = sqlite3.connect('users.db')
     c = conn.cursor()
     c.execute('''CREATE TABLE IF NOT EXISTS users
-                 (id INTEGER PRIMARY KEY, name TEXT UNIQUE, interventions TEXT, constraints TEXT, events TEXT)''')
+                 (id INTEGER PRIMARY KEY, name TEXT UNIQUE, interventions TEXT, constraints TEXT, events TEXT, labfront_name TEXT)''')
     conn.commit()
     conn.close()
 
 def create_custom_database(var_name = "events"):
     # Connect to events.db
-    conn = sqlite3.connect(f'{var_name}.db')
+    conn = sqlite3.connect(f'users.db')
     c = conn.cursor()
 
     # Enable foreign key constraint support
@@ -34,10 +34,11 @@ def create_custom_database(var_name = "events"):
     conn.close()
 
 
-def insert_user(name, interventions, constraints, events = ""):
+def insert_user(name, interventions, constraints, events, labfront_name):
     conn = sqlite3.connect('users.db')
     c = conn.cursor()
-    c.execute('''INSERT INTO users (name, interventions, constraints, events) VALUES (?, ?, ?, ?)''', (name, interventions, constraints, events))
+    c.execute('''INSERT INTO users (name, interventions, constraints, events, labfront_name) VALUES (?, ?, ?, ?, ?)''', 
+              (name, interventions, constraints, events, labfront_name))
     conn.commit()
     conn.close()
 
@@ -101,9 +102,13 @@ def signup_page():
     if custom_event:
         events.append(custom_event)
 
+    st.subheader('Please input your name on Labfront:')
+    labfront_name = st.text_input('Input Labfront name:')
+
+
     if st.button('Signup'):
         if not is_name_exists(name):
-            insert_user(name, "|||".join(interventions), "|||".join(constraints), "|||".join(events))
+            insert_user(name, "|||".join(interventions), "|||".join(constraints), "|||".join(events), labfront_name)
             st.success("Signup successful. Please login.")
         else:
             st.warning("Name already exists. Please choose a different one.")

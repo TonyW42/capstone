@@ -64,7 +64,7 @@ def save_other_response(user_name, response, var_name = "events"):
 
 def record_event_in_database(user, start_time, end_time, event_type, var_name):
     # Connect to events.db
-    conn = sqlite3.connect(f'{var_name}.db')
+    conn = sqlite3.connect(f'users.db')
     c = conn.cursor()
 
     # Insert the event details into the events table
@@ -124,23 +124,14 @@ def visualization_page():
     if 'data' not in st.session_state:
         st.session_state['data'] = None
 
-    # if 'submit_selection' not in st.session_state:
-    #     st.session_state['submit_selection'] = False
-    # if 'other_selected' not in st.session_state:
-    #     st.session_state['other_selected'] = False
-
-    # if 'data' not in st.session_state:
-    #     st.session_state['data'] = None
-
-    # Connect GCP to directly feed the csv data files into the app
     # Creating a hyperlink to GCP
     st.markdown("[Access the Google Cloud Bucket](https://console.cloud.google.com/storage/browser?project=apcomp297&prefix=&forceOnBucketsSortingFiltering=true)", unsafe_allow_html=True)
     # Set the path to your sevice account key
     os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "apcomp297-84a78a17c7a6.json" #replace with your path to the .json credential file
     # Allow the user to input bucke name, subfolder, and file name
-    bucket_name = st.text_input("Enter GCP Bucket Name", value="my-bucket")
+    bucket_name = st.text_input("Enter GCP Bucket Name", value="physiological-data")
     subfolder = st.text_input("Enter GCP Subfolder (optional)", value='raw/')
-    file_name = st.text_input("Enter CSV File Name (with extension)", value="example.csv")
+    file_name = st.text_input("Enter CSV File Name (with extension)", value="mock_data.csv")
     #Combine subfolder and file name to create the full file path
     full_file_path  = f"{subfolder}{file_name}" if subfolder else file_name
 
@@ -158,27 +149,9 @@ def visualization_page():
             st.error(f"Error: {str(e)}")
 
 
-    # Upload both CSV files
-    # uploaded_files = st.file_uploader("Upload Stress and Heart Rate Data CSV", type=["csv"], accept_multiple_files=True)
-
     stress_df = None
     hr_df = None
 
-    # for uploaded_file in uploaded_files:
-    #     header_length = 0  ## NOTE: used to be 5
-    #     df = pd.read_csv(uploaded_file, skiprows=header_length)
-    #     df['isoDate'] = pd.to_datetime(df['isoDate'])
-
-    #     if 'stressLevel' in df.columns:
-    #         stress_df = df
-    #     elif 'beatsPerMinute' in df.columns:
-    #         hr_df = df
-
-    # # Initialize start_date, end_date, start_hour, and end_hour variables
-    # start_date = None
-    # end_date = None
-    # start_hour = 0
-    # end_hour = 23
 
     df = st.session_state['data']
     # assert df is not None 
