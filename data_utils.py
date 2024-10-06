@@ -1,11 +1,12 @@
 import pandas as pd
 import os
-import glob
 from datetime import datetime
 import numpy as np
 import sqlite3
 from google.cloud import storage
 import re
+from sql_utils import *
+import io
 
 # Define a function to clean the timestamp data later
 def clean_timestamp_data(df):
@@ -35,9 +36,6 @@ def clean_timestamp_data(df):
     
     return df
 
-import io
-import pandas as pd
-from google.cloud import storage
 
 def get_csv_from_gcs(bucket_name, prefix, skiprows=5):
     """
@@ -85,9 +83,9 @@ def get_csv_from_gcs(bucket_name, prefix, skiprows=5):
     return df_list
 
 
-if __name__ == "__main__":
-    os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "apcomp297-84a78a17c7a6.json" 
-    get_csv_from_gcs("physiological-data", "raw/Paige_3c9bbf15_labfront_export_09182024//garmin-connect-activity-move-iq-summary", skiprows=5)
+# if __name__ == "__main__":
+#     os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "apcomp297-84a78a17c7a6.json" 
+#     get_csv_from_gcs("physiological-data", "raw/Paige_3c9bbf15_labfront_export_09182024//garmin-connect-activity-move-iq-summary", skiprows=5)
     
 def get_binary_indicator(labfront_exported_data_path, bucket_name = "physiological-data"):
     """
@@ -190,6 +188,7 @@ def clean_data(binary_indicator, labfront_exported_data_path, bucket_name = "phy
         #     dataframes.append(df)
         daily_heart_rate = pd.concat(dataframes, ignore_index = True)
         daily_heart_rate = clean_timestamp_data(daily_heart_rate)
+        daily_heart_rate = daily_heart_rate.loc[daily_heart_rate['beatsPerMinute'].shift() != daily_heart_rate['beatsPerMinute']]
         result["daily_heart_rate"] = daily_heart_rate
        
         
@@ -203,6 +202,7 @@ def clean_data(binary_indicator, labfront_exported_data_path, bucket_name = "phy
         #     dataframes.append(df)
         respiration = pd.concat(dataframes, ignore_index = True)
         respiration = clean_timestamp_data(respiration)
+        respiration = respiration[respiration['breathsPerMinute'] > 0]
         result["respiration"] = respiration
         
     # If sleep_respiration was generated for the given Garmin watch 
@@ -236,6 +236,7 @@ def clean_data(binary_indicator, labfront_exported_data_path, bucket_name = "phy
         #     dataframes.append(df)
         stress = pd.concat(dataframes, ignore_index = True)  
         stress = clean_timestamp_data(stress)
+        stress = stress[stress['stressLevel'] > 0]
         result["stress"] = stress
         
     # If epoch was generated for the given Garmin watch 
@@ -268,7 +269,7 @@ def save_data(df_dict, user_name):
 
     for df_name, df in df_dict.items():
         # Create the table with columns matching the DataFrame structure
-        create_table_sql = f"CREATE TABLE IF NOT EXISTS {df_name} ("
+        create_table_sql = f"CREATE TABLE IF NOT EXISTS {user_name}_{df_name} ("
         for col in df.columns:
             col_type = pd_to_sql_type(df[col].dtype)
             create_table_sql += f"{col} {col_type}, "
@@ -279,7 +280,7 @@ def save_data(df_dict, user_name):
         for _, row in df.iterrows():
             columns = ', '.join(df.columns)
             placeholders = ', '.join(['?'] * len(row))
-            insert_sql = f"INSERT OR IGNORE INTO {df_name} ({columns}) VALUES ({placeholders})"
+            insert_sql = f"INSERT OR IGNORE INTO {user_name}_{df_name} ({columns}) VALUES ({placeholders})"
             cursor.execute(insert_sql, tuple(row))
 
     # Commit the transaction and close the connection
@@ -347,6 +348,8 @@ def list_matching_directories(bucket_name, name_prefix):
 
     return list(matching_directories)
 
+
+
 def update_database(bucket_name="physiological-data"):
     """
     Update the SQLite database with the user's labfront data.
@@ -365,6 +368,8 @@ def update_database(bucket_name="physiological-data"):
     cursor.execute("SELECT labfront_name FROM users")
     labfront_names = cursor.fetchall()  # This returns a list of tuples [(name1,), (name2,), ...]
 
+    lname_to_uname = labfront_name_to_username()
+
     # Loop through each labfront name
     for labfront_name_tuple in labfront_names:
         labfront_name = labfront_name_tuple[0]  # Extract the actual name from the tuple
@@ -381,10 +386,13 @@ def update_database(bucket_name="physiological-data"):
             df_dict = clean_data(binary_ind, labfront_exported_data_path, bucket_name)
 
             # Save the cleaned data into the database
-            save_data(df_dict, labfront_name)
+            save_data(df_dict, lname_to_uname[labfront_name])
 
     # Close the connection
     conn.close()
 
+if __name__ == "__main__":
+    os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "apcomp297-84a78a17c7a6.json" 
+    update_database(bucket_name="physiological-data")
 
 
