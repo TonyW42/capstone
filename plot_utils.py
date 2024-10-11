@@ -3,16 +3,16 @@ import pandas as pd
 import altair as alt
 from vega_datasets import data
 
-def get_plot(var, df, selection):
+def get_plot(var, df):
     print("=" * 20)
     print(var)
     print("=" * 20)
     if var == "Stress Level":
-        chart = plot_stress_level(df, selection)
+        chart = plot_stress_level(df)
     elif var == "Heart Rate":
-        chart = plot_heart_rate(df, selection)
+        chart = plot_heart_rate(df)
     elif var == "Respiration Rate":
-        chart = plot_respiration(df, selection)
+        chart = plot_respiration(df)
     return chart
 
 # Define the color ranges based on stress levels
@@ -27,7 +27,7 @@ def get_color(stress_level):
         return 'red'  # High stress
     return 'gray'  # Default for out-of-range values
 
-def plot_stress_level(stress: pd.DataFrame, selection):
+def plot_stress_level(stress: pd.DataFrame):
     '''
     Returns an Altair plot of stress levels over time with interactive zoom based on a given selection.
     '''
@@ -40,23 +40,22 @@ def plot_stress_level(stress: pd.DataFrame, selection):
         x=alt.X('isoDate:T', title='Timestamp', axis=alt.Axis(format='%Y-%m-%d', labelAngle=45)),
         y=alt.Y('stressLevel:Q', title='Stress level value'),
         color=alt.Color('color:N', 
-                        legend=alt.Legend(
-                            title="Stress Levels",
-                            orient="right",
-                            titleFontSize=12,
-                            labelFontSize=10,
-                            values=['dodgerblue', 'gold', 'darkorange', 'red'],
-                            symbolType='square',
-                            direction='vertical'
-                        )
+                        legend = None
+                        # legend=alt.Legend(
+                        #     title="Stress Levels",
+                        #     orient="right",
+                        #     titleFontSize=12,
+                        #     labelFontSize=10,
+                        #     values=['dodgerblue', 'gold', 'darkorange', 'red'],
+                        #     symbolType='square',
+                        #     direction='vertical'
+                        # )
         )  # Include color legend
     ).properties(
         width=800,
         height=400,
         title='Stress level values over time from 9/13/2024 to 9/18/2024'
-    ).add_selection(
-        selection  # Add the user-defined selection (interactive behavior)
-    )#.interactive()
+    )
 
     return chart  # Return the main chart with the embedded l
 
@@ -76,7 +75,7 @@ def get_hr_zone(age, current_hr):
     else:
         return 0  # Default for out-of-range values
 
-def plot_heart_rate(df: pd.DataFrame, selection):
+def plot_heart_rate(df: pd.DataFrame):
     '''
     Returns an Altair plot of heart rate over time with interactive zoom based on a given selection.
     '''
@@ -116,13 +115,10 @@ def plot_heart_rate(df: pd.DataFrame, selection):
         width=800,
         height=400,
         title='Heart rate (bpm) over time from 9/13/2024 to 9/18/2024'
-    ).add_selection(
-        selection  # Add the user-defined selection (interactive behavior)
     )
-
     return chart  # Return the main chart with the embedded legend
 
-def plot_respiration(respiration: pd.DataFrame, selection):
+def plot_respiration(respiration: pd.DataFrame):
     '''
     Returns an Altair plot of respiration rate over time with interactive zoom based on a given selection.
     '''
@@ -136,8 +132,50 @@ def plot_respiration(respiration: pd.DataFrame, selection):
         width=800,
         height=400,
         title='Respiration rate over time from 9/13/2024 to 9/18/2024'
-    ).add_selection(
-        selection  # Add the user-defined selection (interactive behavior)
-    )#.interactive()
-
+    )
     return chart  # Return the respiration rate chart with interactive zoom on the x-axis
+
+def plot_diff(mean_before, var_before, mean_after, var_after):
+    """
+    Plots a side-by-side bar chart comparing 'before' and 'after' mean values with error bars representing variance.
+    
+    Args:
+    - mean_before: Mean value before
+    - var_before: Variance before
+    - mean_after: Mean value after
+    - var_after: Variance after
+    """
+    
+    # Compute the standard deviation (sqrt of variance)
+    std_before = var_before ** 0.5
+    std_after = var_after ** 0.5
+    
+    # Create a DataFrame to hold the data
+    data = pd.DataFrame({
+        'Condition': ['Before', 'After'],
+        'Mean': [mean_before, mean_after],
+        'Error': [std_before, std_after]
+    })
+
+    # Create the bar plot with error bars
+    bars = alt.Chart(data).mark_bar(opacity=0.5).encode(
+        x=alt.X('Condition:N', title='Condition'),
+        y=alt.Y('Mean:Q', title='Mean Value'),
+        color=alt.Color('Condition:N', legend=None)
+    )
+
+    # Add error bars using the precomputed standard deviations
+    error_bars = bars.mark_errorbar().encode(
+        y=alt.Y('Mean:Q'),
+        yError='Error:Q'
+    )
+
+    # Combine the bars and error bars into a single chart
+    chart = bars + error_bars
+
+    # Display the chart using Streamlit
+    st.altair_chart(chart.properties(
+        width=300,
+        height=400
+    ))
+

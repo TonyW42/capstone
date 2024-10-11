@@ -1,5 +1,6 @@
 import sqlite3
 import pandas as pd
+import numpy as np
 
 def fetch_past_options(user_name, var_name = "events"):
     conn = sqlite3.connect('users.db')
@@ -108,6 +109,89 @@ def labfront_name_to_username():
     labfront_dict = {labfront_name: name for name, labfront_name in rows}
     
     return labfront_dict
+
+
+def get_mean_and_variance(user, intervention, var, X, var_dict, db_path="users.db", use = "before"):
+    """
+    This function selects data from the database based on the user's name and the intervention.
+    Then, it queries for var_dict[var] values that occurred between start_time and X minutes before each start_time.
+    It aggregates these values into a list and returns the mean and variance.
+
+    Args:
+        intervention (str): The intervention to filter in the interventions table.
+        var (str): The variable to query in the dynamically generated table.
+        X (int): Number of minutes to look back from the start_time.
+        var_dict (dict): Dictionary containing variable mappings.
+        db_path (str): The path to the SQLite database (default is "users.db").
+
+    Returns:
+        mean (float): The mean of the selected variables.
+        variance (float): The variance of the selected variables.
+    """
+    # Convert X minutes to milliseconds
+    X_ms = X * 60 * 1000  # X minutes in milliseconds
+
+    # Connect to the database
+    conn = sqlite3.connect(db_path)
+    cursor = conn.cursor()
+
+    # Get the logged-in user's name
+
+    # Query the interventions table to get all start_times for the given user and intervention
+    ## NOTE: start or end time of intervention? 
+    cursor.execute(f"""
+        SELECT start_time
+        FROM interventions
+        WHERE name = ?
+        AND interventions = ?
+    """, (user, intervention))
+
+    start_times = cursor.fetchall()  # List of tuples [(start_time_1,), (start_time_2,), ...]
+
+    if not start_times:
+        conn.close()
+        return None, None  # If no start_times were found, return None for both mean and variance
+
+    selected_values = []
+
+    # Loop over each start_time
+    for start_time_tuple in start_times:
+        start_time = start_time_tuple[0]  # Extract from tuple (in ms)
+
+        # Calculate the time X minutes before start_time in milliseconds
+        if use == "before":
+            time_before = start_time - X_ms
+            arg_sql = (time_before, start_time)
+        if use == "after":
+            time_after = start_time + X_ms
+            arg_sql = (start_time, time_after)
+
+
+        # Query the user-specific table to get the variable value where unix_timestamp_cleaned is between start_time and time_before
+        cursor.execute(f"""
+            SELECT {var_dict[var]}
+            FROM {user}_{var}
+            WHERE unix_timestamp_cleaned BETWEEN ? AND ?
+        """, arg_sql)
+
+        # Fetch all matching rows
+        rows = cursor.fetchall()
+
+        # Append all values from the query to the selected_values list
+        selected_values.extend([row[0] for row in rows])
+
+    conn.close()  # Close the database connection
+
+    # If there are no selected values, return None
+    if not selected_values:
+        return None, None
+
+    # Calculate the mean and variance using numpy
+    mean = np.mean(selected_values)
+    variance = np.var(selected_values)
+
+    return mean, variance
+
 
 if __name__ == "__main__":
     var_dict = {

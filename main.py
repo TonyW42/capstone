@@ -8,7 +8,7 @@ from log import log_page
 
 def main():
     st.sidebar.title('Navigation')
-    page = st.sidebar.radio('Go to', ['Signup', 'Login', 'Visualization', 'Log'])
+    page = st.sidebar.radio('Go to', ['Signup', 'Login', 'Visualization', 'Log', "Annotations", "Compare plot"])
 
     st.session_state.logged_in = st.session_state.get('logged_in', False)
 
@@ -22,7 +22,18 @@ def main():
         if not st.session_state.logged_in:
             st.warning("You must log in to access this page.")
             return
-        visualization_page()
+        visualization_page(annotation=False)
+    elif page == 'Annotations':
+        if not st.session_state.logged_in:
+            st.warning("You must log in to access this page.")
+            return
+        visualization_page(annotation=True)
+    elif page == 'Compare plot':
+        if not st.session_state.logged_in:
+            st.warning("You must log in to access this page.")
+            return
+        visualization_page(diff_plot=True)
+    
     elif page == 'Log':
         log_page() 
 
