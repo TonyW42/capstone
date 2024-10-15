@@ -27,6 +27,7 @@ def get_color(stress_level):
         return 'red'  # High stress
     return 'gray'  # Default for out-of-range values
 
+
 def plot_stress_level(stress: pd.DataFrame):
     '''
     Returns an Altair plot of stress levels over time with interactive zoom based on a given selection.
@@ -35,29 +36,27 @@ def plot_stress_level(stress: pd.DataFrame):
     # Add a column for color based on stress level
     stress['color'] = stress['stressLevel'].apply(get_color)
 
+    # Get the minimum and maximum dates for the title
+    min_date = stress['isoDate'].min()
+    max_date = stress['isoDate'].max()
+
+    # Format the dates to include in the title
+    formatted_min_date = pd.to_datetime(min_date).strftime('%Y-%m-%d %H:%M')
+    formatted_max_date = pd.to_datetime(max_date).strftime('%Y-%m-%d %H:%M')
+
     # Create the Altair chart
     chart = alt.Chart(stress).mark_rule(opacity=0.7).encode(
-        x=alt.X('isoDate:T', title='Timestamp', axis=alt.Axis(format='%Y-%m-%d', labelAngle=45)),
+        x=alt.X('isoDate:T', title='Timestamp', axis=alt.Axis(format='%Y-%m-%d %H:%M', labelAngle=45)),
         y=alt.Y('stressLevel:Q', title='Stress level value'),
-        color=alt.Color('color:N', 
-                        legend = None
-                        # legend=alt.Legend(
-                        #     title="Stress Levels",
-                        #     orient="right",
-                        #     titleFontSize=12,
-                        #     labelFontSize=10,
-                        #     values=['dodgerblue', 'gold', 'darkorange', 'red'],
-                        #     symbolType='square',
-                        #     direction='vertical'
-                        # )
-        )  # Include color legend
+        color=alt.Color('color:N', legend=None)  # No color legend
     ).properties(
         width=800,
         height=400,
-        title='Stress level values over time from 9/13/2024 to 9/18/2024'
+        title=f'Stress level values over time from {formatted_min_date} to {formatted_max_date}'
     )
 
-    return chart  # Return the main chart with the embedded l
+    return chart  # Return the main chart
+
 
 
 def get_hr_zone(age, current_hr):
@@ -96,9 +95,16 @@ def plot_heart_rate(df: pd.DataFrame):
     # Add a color column based on heart rate zone
     df['color'] = df['hr_zone'].map(hr_zone_colors)
 
+    min_date = df['isoDate'].min()
+    max_date = df['isoDate'].max()
+
+    # Format the dates to include in the title
+    formatted_min_date = pd.to_datetime(min_date).strftime('%Y-%m-%d %H:%M')
+    formatted_max_date = pd.to_datetime(max_date).strftime('%Y-%m-%d %H:%M')
+
     # Create the Altair chart
     chart = alt.Chart(df).mark_line(opacity=0.7).encode(
-        x=alt.X('isoDate:T', title='Timestamp', axis=alt.Axis(format='%Y-%m-%d', labelAngle=45)),
+        x=alt.X('isoDate:T', title='Timestamp', axis=alt.Axis(format='%Y-%m-%d %H:%M', labelAngle=45)),
         y=alt.Y('beatsPerMinute:Q', title='Heart rate (bpm)'),
         # color=alt.Color('color:N', 
         #                 legend=alt.Legend(
@@ -114,7 +120,7 @@ def plot_heart_rate(df: pd.DataFrame):
     ).properties(
         width=800,
         height=400,
-        title='Heart rate (bpm) over time from 9/13/2024 to 9/18/2024'
+        title=f'Heart rate (bpm) over time from {formatted_min_date} to {formatted_max_date}'
     )
     return chart  # Return the main chart with the embedded legend
 
@@ -123,17 +129,26 @@ def plot_respiration(respiration: pd.DataFrame):
     Returns an Altair plot of respiration rate over time with interactive zoom based on a given selection.
     '''
     
+    # Get the minimum and maximum dates for the title
+    min_date = respiration['isoDate'].min()
+    max_date = respiration['isoDate'].max()
+
+    # Format the dates to include in the title
+    formatted_min_date = pd.to_datetime(min_date).strftime('%Y-%m-%d %H:%M')
+    formatted_max_date = pd.to_datetime(max_date).strftime('%Y-%m-%d %H:%M')
+
     # Create the Altair chart for respiration rate
     chart = alt.Chart(respiration).mark_line(opacity=0.7).encode(
-        x=alt.X('isoDate:T', title='Timestamp', axis=alt.Axis(format='%Y-%m-%d', labelAngle=45)),
+        x=alt.X('isoDate:T', title='Timestamp', axis=alt.Axis(format='%Y-%m-%d %H:%M', labelAngle=45)),
         y=alt.Y('breathsPerMinute:Q', title='Respiration rate (breaths per minute)'),
         color=alt.value('green')  # Use a single color for respiration rate plot
     ).properties(
         width=800,
         height=400,
-        title='Respiration rate over time from 9/13/2024 to 9/18/2024'
+        title=f'Respiration rate over time from {formatted_min_date} to {formatted_max_date}'
     )
-    return chart  # Return the respiration rate chart with interactive zoom on the x-axis
+    return chart
+
 
 def plot_diff(mean_before, var_before, mean_after, var_after):
     """
