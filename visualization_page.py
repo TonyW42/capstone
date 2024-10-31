@@ -43,17 +43,23 @@ def questionaire(selected, var_name = "events"):
                 save_other_response(st.session_state['user'], other_response, var_name = var_name)
             record_event_in_database(st.session_state['user'], start_time, end_time, other_response, var_name = var_name)
 
+
 def add_annotations(table_name):
-    conn = sqlite3.connect('users.db')
-    query = f"SELECT * FROM {table_name} WHERE name = '{st.session_state.user}'"
-    annotations_df = pd.read_sql_query(query, conn)
+    # Connect to the RDS database
+    conn = get_rds_connection()
+    
+    # Query the specified table for the logged-in user's data
+    query = f"SELECT * FROM {table_name} WHERE name = %s"
+    annotations_df = pd.read_sql_query(query, conn, params=(st.session_state.user,))
+    
+    # Close the connection
     conn.close()
-    # print(annotations_df)
 
-    annotations_df['start_time'] = pd.to_datetime(annotations_df['start_time'], unit = "ms")
-    annotations_df['end_time'] = pd.to_datetime(annotations_df['end_time'], unit = "ms")
-    # print(annotations_df)
+    # Convert start and end times to datetime format
+    annotations_df['start_time'] = pd.to_datetime(annotations_df['start_time'], unit="ms")
+    annotations_df['end_time'] = pd.to_datetime(annotations_df['end_time'], unit="ms")
 
+    # Define color schemes for different tables
     color_scheme = {
         'events': 'reds',
         'interventions': 'blues',
@@ -63,13 +69,15 @@ def add_annotations(table_name):
     # Use the color scheme corresponding to the current table_name
     chosen_color_scheme = color_scheme.get(table_name, 'category10') 
 
-    # Create the annotation
+    # Create the annotation chart
     annotation = alt.Chart(annotations_df).mark_rect(opacity=0.25).encode(
         x='start_time:T',
         x2='end_time:T',
         color=alt.Color(f'{table_name}', legend=alt.Legend(title=table_name), scale=alt.Scale(scheme=chosen_color_scheme))
     )
+    
     return annotation
+
 
 def diff_plot_util(selected_var_dfname):
     options = fetch_past_options(st.session_state['user'], var_name = "interventions")
@@ -96,8 +104,13 @@ def diff_plot_util(selected_var_dfname):
             except ValueError:
                 st.error("Please enter a valid integer.")
     if X_before and X_after is not None:
-        mean_before, var_before = get_mean_and_variance(st.session_state.user, selected_option, selected_var_dfname, X_before, var_dict, db_path="users.db", use = "before")
-        mean_after, var_after = get_mean_and_variance(st.session_state.user, selected_option, selected_var_dfname, X_after, var_dict, db_path="users.db", use = "after")
+        mean_before, var_before = get_mean_and_variance(
+            st.session_state.user, selected_option, selected_var_dfname, X_before, var_dict, use="before"
+        )
+
+        mean_after, var_after = get_mean_and_variance(
+            st.session_state.user, selected_option, selected_var_dfname, X_after, var_dict, use="after"
+        )
         print(mean_before, var_before, mean_after, var_after)
         if mean_before is not None and var_before is not None and mean_after is not None and var_after is not None:
             plot_diff(mean_before, var_before, mean_after, var_after)

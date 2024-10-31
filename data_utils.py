@@ -2,7 +2,6 @@ import pandas as pd
 import os
 from datetime import datetime
 import numpy as np
-import sqlite3
 from google.cloud import storage
 import re
 from sql_utils import *
@@ -251,24 +250,26 @@ def clean_data(binary_indicator, labfront_exported_data_path, bucket_name = "phy
     
     return result 
 
-
 def save_data(df_dict, user_name):
     """
-    Save data from the df_dict into a SQLite database, ensuring no duplicates.
+    Save data from the df_dict into a MySQL database (Amazon RDS), ensuring no duplicates.
     
     Args:
         df_dict: A dictionary where keys are table names and values are pandas DataFrames.
+        user_name: The name of the user to associate with the data.
     """
-    # Connect to the SQLite database (or create it if it doesn't exist)
+    # Connect to the RDS database
+    conn = get_rds_connection()
+    cursor = conn.cursor()
+
+    # Format DataFrames for SQL and prepare for insertion
     for k in df_dict:
         df_dict[k]["name"] = user_name
         df_dict[k] = df_dict[k].applymap(lambda x: x.strftime('%Y-%m-%d %H:%M:%S') if isinstance(x, pd.Timestamp) else x)
-    conn = sqlite3.connect('users.db')
-    cursor = conn.cursor()
-    
+        df_dict[k] = df_dict[k].replace({pd.NA: None, np.nan: None})  # Replace NaN with None for MySQL compatibility
 
     for df_name, df in df_dict.items():
-        # Create the table with columns matching the DataFrame structure
+        # Generate the table creation SQL with columns matching the DataFrame structure
         create_table_sql = f"CREATE TABLE IF NOT EXISTS {user_name}_{df_name} ("
         for col in df.columns:
             col_type = pd_to_sql_type(df[col].dtype)
@@ -276,16 +277,21 @@ def save_data(df_dict, user_name):
         create_table_sql = create_table_sql.rstrip(', ') + ")"
         cursor.execute(create_table_sql)
 
-        # Insert data, using "INSERT OR IGNORE" to avoid inserting duplicates
-        for _, row in df.iterrows():
-            columns = ', '.join(df.columns)
-            placeholders = ', '.join(['?'] * len(row))
-            insert_sql = f"INSERT OR IGNORE INTO {user_name}_{df_name} ({columns}) VALUES ({placeholders})"
-            cursor.execute(insert_sql, tuple(row))
+        # Prepare bulk insert data
+        columns = ', '.join(df.columns)
+        placeholders = ', '.join(['%s'] * len(df.columns))
+        insert_sql = f"INSERT IGNORE INTO {user_name}_{df_name} ({columns}) VALUES ({placeholders})"
+        
+        # Convert DataFrame to list of tuples and execute bulk insert
+        data_to_insert = [tuple(row) for row in df.itertuples(index=False, name=None)]
+        cursor.executemany(insert_sql, data_to_insert)
 
     # Commit the transaction and close the connection
     conn.commit()
     conn.close()
+
+
+
 
 def pd_to_sql_type(pd_type):
     """
@@ -298,7 +304,7 @@ def pd_to_sql_type(pd_type):
         A string representing the corresponding SQLite data type.
     """
     if pd_type == 'int64':
-        return 'INTEGER'
+        return 'BIGINT'
     elif pd_type == 'float64':
         return 'REAL'
     elif pd_type == 'bool':
@@ -320,7 +326,7 @@ def list_matching_directories(bucket_name, name_prefix):
         List of matching directories.
     """
     # Initialize the GCP storage client
-    # os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "apcomp297-84a78a17c7a6.json" 
+    os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "apcomp297-84a78a17c7a6.json" 
     client = storage.Client()
 
     # Get the bucket
@@ -352,16 +358,16 @@ def list_matching_directories(bucket_name, name_prefix):
 
 def update_database(bucket_name="physiological-data"):
     """
-    Update the SQLite database with the user's labfront data.
+    Update the MySQL (Amazon RDS) database with the user's labfront data.
 
-    Connects to `users.db`, retrieves the `labfront_name` of users from the `users` table,
+    Connects to the RDS database, retrieves the `labfront_name` of users from the `users` table,
     and updates the database with their corresponding data from GCS.
 
     Args:
         bucket_name (str): The name of the GCS bucket.
     """
-    # Connect to the SQLite database
-    conn = sqlite3.connect('users.db')
+    # Connect to the RDS database
+    conn = get_rds_connection()
     cursor = conn.cursor()
 
     # Get all labfront names from the "users" table
@@ -378,6 +384,8 @@ def update_database(bucket_name="physiological-data"):
         dirs = list_matching_directories(bucket_name, labfront_name)
 
         # Process each directory (assuming these directories represent different datasets)
+        all = len(dirs)
+        count = 0
         for labfront_exported_data_path in dirs:
             # Get the binary indicator for the available data in this directory
             binary_ind = get_binary_indicator(labfront_exported_data_path, bucket_name)
@@ -387,9 +395,12 @@ def update_database(bucket_name="physiological-data"):
 
             # Save the cleaned data into the database
             save_data(df_dict, lname_to_uname[labfront_name])
+            count += 1
+            print(f"{count} / {all}")
 
     # Close the connection
     conn.close()
+
 
 if __name__ == "__main__":
     os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "apcomp297-84a78a17c7a6.json" 
