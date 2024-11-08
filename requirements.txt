@@ -1,0 +1,13 @@
+pandas
+os
+datetime
+numpy
+google-cloud-storage
+re
+google 
+io
+streamlit
+sqlite3
+altair
+vega_datasets
+pymysql
