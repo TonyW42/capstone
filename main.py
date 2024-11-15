@@ -2,6 +2,7 @@ import streamlit as st
 from signup_page import signup_page
 from login_page import login_page
 from visualization_page import visualization_page
+from data_page import data_upload
 # from log import log_page
 # from sql_utils import get_rds_connection
 
@@ -9,7 +10,7 @@ from visualization_page import visualization_page
 
 def main():
     st.sidebar.title('Navigation')
-    page = st.sidebar.radio('Go to', ['Signup', 'Login', 'Visualization', "Annotations", "Compare plot"])
+    page = st.sidebar.radio('Go to', ['Signup', 'Login', 'Visualization', "Annotations", "Compare plot", "Upload data"])
 
     st.session_state.logged_in = st.session_state.get('logged_in', False)
 
@@ -34,6 +35,12 @@ def main():
             st.warning("You must log in to access this page.")
             return
         visualization_page(diff_plot=True)
+    elif page == "Upload data":
+        if not st.session_state.logged_in:
+            st.warning("You must log in to access this page.")
+            return
+        data_upload()
+
     
     # elif page == 'Log':
     #     log_page() 
