@@ -104,16 +104,27 @@ def diff_plot_util(selected_var_dfname):
             except ValueError:
                 st.error("Please enter a valid integer.")
     if X_before and X_after is not None:
-        mean_before, var_before = get_mean_and_variance(
+        mean_before, var_before, sequence_before = get_mean_and_variance(
             st.session_state.user, selected_option, selected_var_dfname, X_before, var_dict, use="before"
         )
 
-        mean_after, var_after = get_mean_and_variance(
+        mean_after, var_after, sequence_after = get_mean_and_variance(
             st.session_state.user, selected_option, selected_var_dfname, X_after, var_dict, use="after"
         )
-        print(mean_before, var_before, mean_after, var_after)
+        # print(mean_before, var_before, mean_after, var_after)
+        # print(sequence_before)
         if mean_before is not None and var_before is not None and mean_after is not None and var_after is not None:
             plot_diff(mean_before, var_before, mean_after, var_after)
+            plot_sequences(sequence_before, sequence_after)
+            ## Write a function called plot_sequences(seq_before, seq_after)
+            '''
+            seq_before: [[], []], inner list is the sequence of the indicator before intervention 
+            seq_after: [[], []], inner list is the sequence of the indicator after intervention 
+            want a plot that: 
+                - have a red vertical line at x = 0
+                - for x < 0: should be the sequence of indicators before intervenion (closer to intevention start time, x -> 0)
+                - for x > 0: should be the sequence of indicators after intervenion (closer to intevention end time, x -> 0)
+            '''
 
 def visualization_page(annotation = False, diff_plot = False):
     st.title("Visualization Page")

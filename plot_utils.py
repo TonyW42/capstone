@@ -194,3 +194,49 @@ def plot_diff(mean_before, var_before, mean_after, var_after):
         height=400
     ))
 
+def plot_sequences(seq_before, seq_after):
+    """
+    Plots sequences before and after an intervention using Altair.
+    Sequences corresponding to the same intervention event share the same color.
+    """
+    # Prepare data with a shared color ID for matching sequences
+    before_data = []
+    after_data = []
+    print(seq_before)
+    
+    for i, seq in enumerate(seq_before):
+        x_vals = list(range(-len(seq)+1, 1))  # Negative x-values
+        # print(x_vals)
+        # print(seq)
+        # print()
+        before_data.extend({"x": x, "value": v, "type": "Before", "event_id": f"Event {i+1}"} 
+                           for x, v in zip(x_vals, seq))
+    
+    for i, seq in enumerate(seq_after):
+        x_vals = list(range(0, len(seq) + 1))  # Positive x-values
+        after_data.extend({"x": x, "value": v, "type": "After", "event_id": f"Event {i+1}"} 
+                          for x, v in zip(x_vals, seq))
+
+    # Combine data into a single DataFrame
+    data = pd.DataFrame(before_data + after_data)
+
+    # Create the Altair chart for sequences
+    chart = alt.Chart(data).mark_line().encode(
+        x=alt.X("x:Q", title="Time (Relative to Intervention)"),
+        y=alt.Y("value:Q", title="Indicator Value"),
+        color=alt.Color("event_id:N", legend=alt.Legend(title="Intervention Event")),
+        detail="type:N"  # Detail ensures differentiation between before and after within the same event
+    ).properties(
+        title="Sequence of Indicators Before and After Intervention",
+        width=800,
+        height=400
+    )
+
+    # Add a vertical line at x=0 for the intervention point
+    rule = alt.Chart(pd.DataFrame({"x": [0]})).mark_rule(color="red").encode(x="x:Q")
+
+    # Overlay the rule on the main chart
+    final_chart = chart + rule
+
+    # Render the chart in Streamlit
+    st.altair_chart(final_chart, use_container_width=True)

@@ -147,6 +147,7 @@ def get_mean_and_variance(user, intervention, var, X, var_dict, use="before"):
     """
     # Convert X minutes to milliseconds
     X_ms = X * 60 * 1000  # X minutes in milliseconds
+    print(X * 60 * 1000)
 
     # Connect to the RDS database
     conn = get_rds_connection()
@@ -167,10 +168,12 @@ def get_mean_and_variance(user, intervention, var, X, var_dict, use="before"):
         return None, None  # If no start_times were found, return None for both mean and variance
 
     selected_values = []
+    sequences = []
 
     # Loop over each start_time
     for start_time_tuple in start_times:
         start_time = start_time_tuple[0]  # Extract from tuple (in ms)
+        print(start_time)
 
         # Calculate the time X minutes before or after start_time in milliseconds
         if use == "before":
@@ -196,6 +199,7 @@ def get_mean_and_variance(user, intervention, var, X, var_dict, use="before"):
 
         # Append all values from the query to the selected_values list
         selected_values.extend([row[0] for row in rows])
+        sequences.append([row[0] for row in rows])
 
     conn.close()  # Close the database connection
 
@@ -207,7 +211,7 @@ def get_mean_and_variance(user, intervention, var, X, var_dict, use="before"):
     mean = np.mean(selected_values)
     variance = np.var(selected_values)
 
-    return mean, variance
+    return mean, variance, sequences 
 
 
 
