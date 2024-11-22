@@ -214,7 +214,25 @@ def get_mean_and_variance(user, intervention, var, X, var_dict, use="before"):
     return mean, variance, sequences 
 
 
+def get_admin_name():
+    conn = get_rds_connection()
+    try:
+        with conn.cursor() as cursor:
+            # Query to get the admin name
+            query = "SELECT name FROM admin_name LIMIT 1;"
+            cursor.execute(query)
+            result = cursor.fetchone()
+            if result:
+                return result[0]
+            else:
+                return "No admin name found."
+    except Exception as e:
+        print(f"Error: {e}")
+        return None
+    finally:
+        conn.close()
 
+        
 if __name__ == "__main__":
     var_dict = {
         "Stress Level" : "stress",

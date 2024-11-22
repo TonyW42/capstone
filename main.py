@@ -3,6 +3,8 @@ from signup_page import signup_page
 from login_page import login_page
 from visualization_page import visualization_page
 from data_page import data_upload
+from download_data import download_user_data
+from sql_utils import get_admin_name
 # from log import log_page
 # from sql_utils import get_rds_connection
 
@@ -10,7 +12,7 @@ from data_page import data_upload
 
 def main():
     st.sidebar.title('Navigation')
-    page = st.sidebar.radio('Go to', ['Signup', 'Login', 'Visualization', "Annotations", "Compare plot", "Upload data"])
+    page = st.sidebar.radio('Go to', ['Signup', 'Login', 'Visualization', "Annotations", "Compare plot", "Upload data", "Download data"])
 
     st.session_state.logged_in = st.session_state.get('logged_in', False)
 
@@ -40,6 +42,12 @@ def main():
             st.warning("You must log in to access this page.")
             return
         data_upload()
+    elif page == "Download data":
+        if not (st.session_state.logged_in and get_admin_name() == st.session_state.user):
+            st.warning("You must log in as the admin to access this page.")
+            return
+        download_user_data()
+
 
     
     # elif page == 'Log':

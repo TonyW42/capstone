@@ -1,6 +1,7 @@
 import streamlit as st
 from data_utils import update_database
 from sql_utils import *
+from sql_utils import get_admin_name
 
 # Authenticate user by checking against the RDS database
 def authenticate_user(name):
@@ -25,6 +26,13 @@ def login_page():
             st.session_state.user = user[1]  # Save the logged-in user's name
             # update_database()  # Call the database update function
             return True  # Indicate successful login
+        elif name.strip() == get_admin_name():
+            st.session_state.logged_in = True
+            st.session_state.user = name.strip()
+            return True 
+
+
+
         else:
             st.error("Invalid name. Please try again.")
             return False  # Indicate unsuccessful login
